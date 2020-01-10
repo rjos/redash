@@ -1,0 +1,62 @@
+version: '3'
+services: 
+    server: 
+        image: redash/redash:latest
+        container_name: redash
+        command: server
+        ports: 
+            - "5000:5000"
+            - "5678:5678"
+        depends_on: 
+            - redis
+            - postgres
+        environment:
+            REDASH_REDIS_URL: "redis://redis:6379/0"
+            REDASH_DATABASE_URL: "postgresql://postgres@postgres/postgres"
+    
+    scheduler:
+        image: redash/redash:latest
+        container_name: redash_scheduler
+        command: scheduler
+        depends_on: 
+            - server
+        environment: 
+            REDASH_REDIS_URL: "redis://redis:6379/0"
+    
+    worker:
+        image: redash/redash:latest
+        container_name: redash_worker
+        command: worker
+        depends_on: 
+            - server
+        environment: 
+            PYTHONUNBUFFERED: 0
+            REDASH_LOG_LEVEL: "INFO"
+            REDASH_REDIS_URL: "redis://redis:6379/0"
+            REDASH_DATABASE_URL: "postgresql://postgres@postgres/postgres"
+    
+    celery-worker:
+        image: redash/redash:latest
+        container_name: redash_celery
+        command: celery_worker
+        depends_on: 
+            - server
+        environment: 
+            PYTHONUNBUFFERED: 0
+            REDASH_LOG_LEVEL: "INFO"
+            REDASH_REDIS_URL: "redis://redis:6379/0"
+            REDASH_DATABASE_URL: "postgresql://postgres@postgres/postgres"
+            QUEUES: "queries,scheduled_queries"
+            WORKERS_COUNT: 1
+    
+    redis:
+        image: redis:latest
+        container_name: redis
+    
+    postgres:
+        image: postgres:latest
+        container_name: postgres
+        ports: 
+            - "15432:5432"
+    
+    
